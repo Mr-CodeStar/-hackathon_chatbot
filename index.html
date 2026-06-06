@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent AI Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        /* Typography overrides to render clean markdown within the dark-mode layout */
+        .prose-markdown p { margin-bottom: 0.75rem; }
+        .prose-markdown p:last-child { margin-bottom: 0; }
+        .prose-markdown ul, .prose-markdown ol { margin-left: 1.5rem; margin-bottom: 0.75rem; list-style-type: disc; }
+        .prose-markdown ol { list-style-type: decimal; }
+        .prose-markdown code { background-color: #3f3f46; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; color: #f4f4f5; }
+        .prose-markdown pre { background-color: #18181b; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.75rem 0; border: 1px solid #3f3f46; }
+        .prose-markdown pre code { background-color: transparent; padding: 0; border-radius: 0; }
+        .prose-markdown strong { color: #ffffff; font-weight: 600; }
+        .prose-markdown a { color: #10b981; text-decoration: underline; }
+        .prose-markdown table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.875rem; }
+        .prose-markdown th, .prose-markdown td { border: 1px solid #3f3f46; padding: 0.5rem; text-align: left; }
+        .prose-markdown th { background-color: #27272a; }
+
+        /* Custom subtle scrollbar layout for modern browser treatments */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #3f3f46;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-zinc-900 text-zinc-100 font-sans h-screen flex overflow-hidden">
+
+    <aside class="w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col h-full hidden md:flex shrink-0">
+        <div class="p-4 border-b border-zinc-800">
+            <button id="new-chat-btn" class="w-full py-2 px-4 bg-zinc-800 hover:bg-zinc-700 transition rounded-lg text-sm font-medium flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-plus"></i> New Chat
+            </button>
+        </div>
+        
+        <div id="history-container" class="flex-1 overflow-y-auto p-2 space-y-1 text-sm text-zinc-400 custom-scrollbar">
+            <div class="px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Recent Chats</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full bg-zinc-900 relative overflow-hidden">
+        <header class="w-full h-14 border-b border-zinc-800 flex items-center px-4 justify-between shrink-0 bg-zinc-900/50 backdrop-blur-sm z-10">
+            <span class="font-semibold text-zinc-200">AI Multi-Mode Agent</span>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20">Online</span>
+        </header>
+
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
+            <div class="flex gap-4 max-w-3xl mx-auto">
+                <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white shrink-0">
+                    <i class="fa-solid fa-robot text-xs"></i>
+                </div>
+                <div class="space-y-2 prose-markdown">
+                    <p class="text-zinc-300 leading-relaxed">Hello! I am your Multi-Mode Agent. Ask me general questions, let me search the web, or upload a document for RAG analysis.</p>
+                </div>
+            </div>
+
+            <div id="scroll-anchor-spacer" class="h-32 shrink-0"></div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-900 via-zinc-900 via-75% to-transparent pointer-events-none z-10">
+            <div class="max-w-3xl mx-auto flex flex-col gap-2 pointer-events-auto">
+                
+                <div id="file-preview-zone" class="hidden flex items-center">
+                    <div class="bg-zinc-800 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-xl animate-fade-in">
+                        <i class="fa-solid fa-file-lines text-emerald-400"></i>
+                        <span id="file-preview-name" class="font-medium truncate max-w-xs">document.pdf</span>
+                        <button id="clear-file-btn" type="button" class="text-zinc-400 hover:text-red-400 transition ml-1 font-bold text-sm cursor-pointer" title="Remove File">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <form id="chat-form" class="bg-zinc-800 border border-zinc-700 rounded-xl p-2 flex items-center gap-2 shadow-2xl focus-within:border-zinc-500 transition">
+                    <input type="text" id="user-input" placeholder="Message AI Agent..." class="flex-1 bg-transparent border-none outline-none text-zinc-100 p-2 placeholder-zinc-500 text-sm" required autocomplete="off">
+                    
+                    <div class="flex items-center gap-2 pr-1">
+                        <label for="file-upload" class="w-9 h-9 flex items-center justify-center bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 text-zinc-300 rounded-lg cursor-pointer transition" title="Upload Document">
+                            <i class="fa-solid fa-plus text-sm"></i>
+                            <input type="file" id="file-upload" class="hidden" accept=".pdf,.txt,.docx">
+                        </label>
+
+                        <button type="submit" class="w-9 h-9 flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg transition cursor-pointer" title="Send Message">
+                            <i class="fa-solid fa-arrow-up text-sm"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center text-xs text-zinc-600 mt-1">Hackathon Prototype v1.0</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatMessages = document.getElementById('chat-messages');
+        const historyContainer = document.getElementById('history-container');
+        const fileUpload = document.getElementById('file-upload');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const scrollSpacer = document.getElementById('scroll-anchor-spacer');
+        
+        // File UI components matching prompt setup specifications
+        const filePreviewZone = document.getElementById('file-preview-zone');
+        const filePreviewName = document.getElementById('file-preview-name');
+        const clearFileBtn = document.getElementById('clear-file-btn');
+
+        const BACKEND_URL = 'http://127.0.0.1:8000';
+        let currentSessionId = null; 
+
+        // Configure Marked Engine options explicitly
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        window.addEventListener('DOMContentLoaded', fetchHistory);
+
+        async function fetchHistory() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/history`);
+                const data = await response.json();
+                updateSidebarHistory(data.history_list);
+            } catch (error) {
+                console.error("Could not fetch initial history data loops:", error);
+            }
+        }
+
+        newChatBtn.addEventListener('click', () => {
+            currentSessionId = null;
+            // Clear message list cleanly but preserve the structural scroll spacer block intact
+            chatMessages.innerHTML = ''; 
+            chatMessages.appendChild(scrollSpacer);
+            
+            appendMessage("Hello! Started a brand new chat thread. Your first message will become the title in the database.", 'bot');
+            fetchHistory(); 
+        });
+
+        // Watch structural input changes and replace annoying alert elements with UI chips
+        fileUpload.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) {
+                filePreviewName.textContent = e.target.files[0].name;
+                filePreviewZone.classList.remove('hidden');
+            } else {
+                resetFileSelection();
+            }
+        });
+
+        clearFileBtn.addEventListener('click', resetFileSelection);
+
+        function resetFileSelection() {
+            fileUpload.value = ''; 
+            filePreviewZone.classList.add('hidden');
+            filePreviewName.textContent = '';
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const messageText = userInput.value.trim();
+            if (!messageText) return;
+
+            appendMessage(messageText, 'user');
+            userInput.value = '';
+
+            const formData = new FormData();
+            formData.append('prompt', messageText);
+            
+            if (currentSessionId) {
+                formData.append('session_id', currentSessionId);
+            }
+            if (fileUpload.files[0]) {
+                formData.append('file', fileUpload.files[0]);
+            }
+
+            // Instantly wipe file interface selections right on transmission execution step
+            resetFileSelection();
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/send_prompt`, {
+                    method: 'POST',
+                    body: formData 
+                });
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                
+                appendMessage(data.agent_response, 'bot');
+                updateSidebarHistory(data.history_list); 
+
+            } catch (error) {
+                console.error("Transmission breakdown encountered: ", error);
+                appendMessage("Error communicating with the backend database or orchestrator.", 'bot');
+            }
+        });
+
+        async function loadOldSession(sessionId) {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/get_session_messages?session_id=${sessionId}`);
+                const data = await response.json();
+                
+                currentSessionId = sessionId;
+                chatMessages.innerHTML = ''; 
+                chatMessages.appendChild(scrollSpacer);
+                
+                data.messages.forEach(msg => {
+                    appendMessage(msg.content, msg.sender);
+                });
+                
+                fetchHistory();
+            } catch (error) {
+                console.error("Failed to recover old chat logs:", error);
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'flex gap-4 max-w-3xl mx-auto animate-fade-in';
+            const isUser = sender === 'user';
+            
+            const contentParsed = isUser ? `<p class="text-zinc-300 leading-relaxed">${escapeHtml(text)}</p>` : marked.parse(text);
+            
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full ${isUser ? 'bg-zinc-700' : 'bg-emerald-600'} flex items-center justify-center text-white shrink-0">
+                    <i class="${isUser ? 'fa-regular fa-user' : 'fa-solid fa-robot'} text-xs"></i>
+                </div>
+                <div class="space-y-2 flex-1 text-zinc-300 content-box prose-markdown overflow-hidden">
+                    ${contentParsed}
+                </div>
+            `;
+            
+            // CRITICAL FIX: Insert new messages BEFORE the static scroll space anchor item
+            chatMessages.insertBefore(msgDiv, scrollSpacer);
+            
+            // Execute deterministic scroll height translation checks to ensure absolute visual line visibility
+            chatMessages.scrollTo({
+                top: chatMessages.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function updateSidebarHistory(historyArray) {
+            historyContainer.innerHTML = '<div class="px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Recent Chats</div>';
+            
+            historyArray.forEach(item => {
+                const historyItem = document.createElement('div');
+                const isActive = item.session_id === currentSessionId 
+                    ? 'bg-zinc-800 text-zinc-100 font-medium border border-zinc-700/50' 
+                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200';
+                
+                historyItem.className = `p-3 ${isActive} rounded-lg cursor-pointer flex items-center gap-2 truncate transition`;
+                historyItem.innerHTML = `
+                    <i class="fa-regular fa-message ${item.session_id === currentSessionId ? 'text-emerald-400' : 'text-zinc-500'}"></i>
+                    <span class="truncate">${item.session_title}</span>
+                `;
+                
+                historyItem.addEventListener('click', () => loadOldSession(item.session_id));
+                historyContainer.appendChild(historyItem);
+            });
+        }
+    </script>
+</body>
+</html>

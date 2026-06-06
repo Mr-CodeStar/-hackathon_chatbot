@@ -1,0 +1,7 @@
+google-genai
+duckduckgo-search
+yfinance
+feedparser
+requests
+fastapi
+uvicorn
